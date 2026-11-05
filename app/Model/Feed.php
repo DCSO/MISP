@@ -1368,6 +1368,27 @@ class Feed extends AppModel
      * @return array|bool
      * @throws Exception
      */
+    /**
+     * Download and process a feed, with memory optimizations for large feeds.
+     *
+     * Large feeds (10k+ events) can cause significant memory accumulation if not
+     * handled carefully. This method implements several optimizations:
+     *
+     * 1. Results array limiting: Only count successes/failures, not all UUIDs
+     * 2. Periodic garbage collection: gc_collect_cycles() every 50 events
+     * 3. Model cache clearing: Disable query caches to break cyclic references
+     * 4. Raw data cleanup: Explicitly unset() large temporary buffers
+     *
+     * These combined measures reduce peak memory from O(n*event_size) to
+     * approximately O(100*event_size), making large feeds manageable within
+     * reasonable memory limits (4-8 GB).
+     *
+     * @param int $feedId Feed ID to download
+     * @param array $user User performing the download
+     * @param int|bool $jobId Background job ID (if any)
+     * @return array|bool Feed download results or false on error
+     * @throws Exception
+     */
     public function downloadFromFeedInitiator($feedId, $user, $jobId = false)
     {
         $feed = $this->find('first', array(

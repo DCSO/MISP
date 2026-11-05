@@ -859,6 +859,7 @@ class Feed extends AppModel
             $this->__cleanupFile($feed, '/' . $uuid . '.json');
 
             if ($currentItem % 50 === 0) {
+                $this->__clearModelCaches();
                 gc_collect_cycles();
             }
 
@@ -889,6 +890,7 @@ class Feed extends AppModel
             $this->__cleanupFile($feed, '/' . $uuid . '.json');
 
             if ($currentItem % 50 === 0) {
+                $this->__clearModelCaches();
                 gc_collect_cycles();
                 if ($currentItem % 10 === 0) {
                     $this->jobProgress($jobId, null, 100 * (($currentItem + 1) / $total));
@@ -899,6 +901,26 @@ class Feed extends AppModel
         }
 
         return $results;
+    }
+
+    /**
+     * Clear model and registry caches to prevent memory accumulation.
+     * Call this periodically during feed downloads to release cyclic references
+     * held by CakePHP's ClassRegistry that would otherwise persist in memory.
+     *
+     * @return void
+     */
+    private function __clearModelCaches()
+    {
+        if (!empty($this->Event)) {
+            $this->Event->cache(false);
+            if (!empty($this->Event->Attribute)) {
+                $this->Event->Attribute->cache(false);
+            }
+            if (!empty($this->Event->Object)) {
+                $this->Event->Object->cache(false);
+            }
+        }
     }
 
     private function __createFeedRequest($headers = false)
